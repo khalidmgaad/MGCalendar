@@ -12,13 +12,14 @@ import UIKit
 class MGCalendar: UIView {
 
     //MARK: Variables
+    var isDrawn = false
     var calendar: Calendar!
     var currentDate: Date! {
         didSet {
-            print("NEW DATE > \(stringFromDate(date: self.currentDate, formate: "dd MM yyyy"))")
             self.subviews.forEach { (v) in
                 v.removeFromSuperview()
             }
+            self.dayButtons.removeAll()
             draw(self.frame)
         }
     }
@@ -41,7 +42,8 @@ class MGCalendar: UIView {
         }
     }
     
-    private var dayButtons : [UIButton]!
+    private var dayButtons = [UIButton]()
+    private var dateLabel : UILabel!
     
     private let spacing : CGFloat = 8
     private var buttonSize : CGSize {
@@ -85,11 +87,15 @@ class MGCalendar: UIView {
             let bFrame = CGRect(origin: positionForButton(at: i), size: bSize)
             let button = UIButton(frame: bFrame)
             button.setTitle("\(day)", for: .normal)
-            button.titleLabel?.font = UIFont(name: "Nunito-Regular", size: 13)
+            button.titleLabel?.font = UIFont(name: "Nunito-Light", size: 13)
             button.tag = day
             button.addTarget(self, action: #selector(dayTapped(sender:)), for: .touchUpInside)
             monthDaysView.addSubview(button)
             day+=1
+            
+            if self.day == day-1 {
+                button.titleLabel?.font = UIFont(name: "Nunito-Bold", size: 15)
+            }
         }
     }
     
@@ -126,18 +132,20 @@ class MGCalendar: UIView {
         headerView.addSubview(NextBtn)
         NextBtn.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
         
-        let dateHolder = UILabel(frame: headerView.bounds)
-        dateHolder.text = stringFromDate(date: currentDate, formate: "dd MMMM yyyy")
-        dateHolder.textColor = .white
-        dateHolder.font = UIFont(name: "Nunito-Bold", size: 18)
-        dateHolder.textAlignment = .center
-        headerView.addSubview(dateHolder)
+        dateLabel = UILabel(frame: headerView.bounds)
+        dateLabel.text = stringFromDate(date: currentDate, formate: "dd MMMM yyyy")
+        dateLabel.textColor = .white
+        dateLabel.font = UIFont(name: "Nunito-Bold", size: 18)
+        dateLabel.textAlignment = .center
+        headerView.addSubview(dateLabel)
         
     }
     
     @objc func dayTapped(sender: UIButton){
         let day = sender.tag
-        currentDate = calendar.date(bySetting: .day, value: day, of: currentDate)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MM yyyy"
+        currentDate = formatter.date(from: "\(day) \(self.month) \(self.year)")
     }
     
     @objc func prevTapped() {
@@ -150,16 +158,10 @@ class MGCalendar: UIView {
         currentDate = currentDate.addingTimeInterval(TimeInterval(3600*24*range.count))
     }
     
-    func stringFromDate(date: Date,formate: String)->String{
-        let formatter = DateFormatter()
-        formatter.dateFormat = formate
-        return formatter.string(from: date)
-    }
-    
     func firstWeekDay(of Month: Int) -> Int?{
         let formatter = DateFormatter()
         formatter.dateFormat = "dd MM yyyy"
-        let date = formatter.date(from: stringFromDate(date: currentDate, formate: "1 MM yyyy"))
+        let date = formatter.date(from: stringFromDate(date: currentDate, formate: "1 MM yyyy")!)
         calendar = Calendar.current
         let comps = calendar.dateComponents([.month,.weekday], from: date!)
         
@@ -177,14 +179,15 @@ class MGCalendar: UIView {
         let comps = calendar.dateComponents([.day,.month,.year,.weekday], from: currentDate)
         let monthStart = firstWeekDay(of: comps.month!)
         let range = calendar.range(of: .day, in: .month, for: currentDate)
-    
+        
         SetupViews()
         drawWeekDays()
         drawButtons(start: monthStart!,length: range!.count)
         drawHeader()
         
         style()
-
+        
+        isDrawn = true
     }
     
     override func awakeFromNib() {
@@ -192,87 +195,4 @@ class MGCalendar: UIView {
         self.currentDate = Date()
     }
     
-}
-
-
-//MARK: Extensions
-extension UIView{
-    
-    var xPos : CGFloat {
-        get {
-            return frame.origin.x
-        }
-    }
-    
-    var yPos : CGFloat {
-        get {
-            return frame.origin.y
-        }
-    }
-    
-    var height: CGFloat {
-        get {
-            return frame.height
-        }
-    }
-    
-    var width: CGFloat {
-        get {
-            return frame.width
-        }
-    }
-    
-    @IBInspectable var cornerRadius : CGFloat {
-        get {
-            return self.layer.cornerRadius
-        }
-        set {
-            self.layer.cornerRadius = newValue
-            self.layer.masksToBounds = true
-        }
-    }
-    
-    func applyGradient(colors: [UIColor]){
-        let gradient = CAGradientLayer()
-        gradient.frame = bounds
-        gradient.colors = colors.map{ return $0.cgColor }
-        gradient.locations = [0.0, 1.0]
-        self.layer.insertSublayer(gradient, at: 0)
-    }
-    
-}
-
-extension UIColor {
-    convenience init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        
-        var rgb: UInt64 = 0
-        
-        var r: CGFloat = 0.0
-        var g: CGFloat = 0.0
-        var b: CGFloat = 0.0
-        var a: CGFloat = 1.0
-        
-        let length = hexSanitized.count
-        
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        
-        if length == 6 {
-            r = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
-            g = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
-            b = CGFloat(rgb & 0x0000FF) / 255.0
-            
-        } else if length == 8 {
-            r = CGFloat((rgb & 0xFF000000) >> 24) / 255.0
-            g = CGFloat((rgb & 0x00FF0000) >> 16) / 255.0
-            b = CGFloat((rgb & 0x0000FF00) >> 8) / 255.0
-            a = CGFloat(rgb & 0x000000FF) / 255.0
-            
-        } else {
-            return nil
-        }
-        
-        self.init(red: r, green: g, blue: b, alpha: a)
-    }
 }
