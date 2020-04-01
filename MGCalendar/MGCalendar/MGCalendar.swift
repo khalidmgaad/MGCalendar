@@ -8,10 +8,15 @@
 
 import UIKit
 
-@IBDesignable
+
+protocol MGCalendarDelegate {
+    func MGCalendarDateChanged(newDate: Date)
+}
+
 class MGCalendar: UIView {
 
     //MARK: Variables
+    var delegate : MGCalendarDelegate?
     var isDrawn = false
     var calendar: Calendar!
     var currentDate: Date! {
@@ -21,6 +26,8 @@ class MGCalendar: UIView {
             }
             self.dayButtons.removeAll()
             draw(self.frame)
+            
+            delegate?.MGCalendarDateChanged(newDate: self.currentDate)
         }
     }
     
@@ -171,6 +178,7 @@ class MGCalendar: UIView {
     func style() {
         cornerRadius = 20
         applyGradient(colors: [UIColor(hex: "#9ED3DB")!,UIColor(hex: "#6CB6C1")!])
+        addShadow(color: .red, opacity: 1, radius: 10)
     }
     
     //MARK: Lifecycle

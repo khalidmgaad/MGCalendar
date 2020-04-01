@@ -10,11 +10,21 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    //MARK: Outlets
+    
+    @IBOutlet weak var mgCalendar: MGCalendar!
+    @IBOutlet weak var label: UILabel!
+    
+    //MARK: Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
+        mgCalendar.delegate = self
     }
+}
 
-
+extension ViewController : MGCalendarDelegate {
+    func MGCalendarDateChanged(newDate: Date) {
+        self.label.text = stringFromDate(date: newDate, formate: "dd MMMM yyyy")
+    }
 }
 
